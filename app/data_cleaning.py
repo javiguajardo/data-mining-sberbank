@@ -19,9 +19,82 @@ def replace_missing_values_with_mode(data, features):
     data[columns] = data[columns].fillna(mode.iloc[0])
     return data
 
+def replace_missing_values_with_mean(data, features):
+    features = data[features]
+    columns = features.columns
+    mean = data[columns].mean()
+    mean = round(mean, 2)
+    data[columns] = data[columns].fillna(mean.iloc[0])
+
+    return data
+
+def attribute_subset_selection_with_trees(data):
+    # import data
+    num_features = len(data.columns) - 1
+
+    cols = data.columns
+    num_cols = data._get_numeric_data().columns
+    nominal_cols = list(set(cols) - set(num_cols))
+
+    data[nominal_cols] = convert_data_to_numeric(data[nominal_cols])
+
+    features = data[list(range(1, num_features))]
+    target = data[[num_features]]
+
+    # First 10 rows
+    print('Training Data:\n\n' + str(features[:10]))
+    print('\n')
+    print('Targets:\n\n' + str(target[:10]))
+
+    # Model declaration
+    extra_tree = ExtraTreesClassifier(n_estimators=100, max_features=40, max_depth = 5)
+
+    # Model training
+    extra_tree.fit(features, target.values.ravel())
+
+    # Model information:
+    print('\nModel information:\n')
+
+    # display the relative importance of each attribute
+    importances = extra_tree.feature_importances_
+    std = np.std([tree.feature_importances_ for tree in extra_tree.estimators_],
+                 axis=0)
+    indices = np.argsort(importances)[::-1]
+
+    # Print the feature ranking
+    print("Feature ranking:")
+
+    for f in range(features.shape[1]):
+        print("%d. feature %s (%f)" % (f + 1, features.columns[indices[f]], importances[indices[f]]))
+
+    # If model was training before prefit = True
+    model = SelectFromModel(extra_tree, prefit = True)
+
+    # Model transformation
+    new_feature_vector = model.transform(features)
+
+    # First 10 rows of new feature vector
+    print('\nNew feature vector:\n')
+    print(new_feature_vector[:10])
+
+    # Plot the feature importances of the forest
+    plt.figure()
+    plt.title("Feature importances")
+    plt.bar(range(features.shape[1]), importances[indices],
+           color="r", yerr=std[indices], align="center")
+    plt.xticks(range(features.shape[1]), indices)
+    plt.xlim([-1, features.shape[1]])
+    plt.show()
+
+    new_data = np.append(new_feature_vector, target.values, axis=1)
+    print('\nNew array\n')
+    print(new_data)
+
+    return new_data
+
 if __name__ == "__main__":
     data = open_file("../resources/train.csv")
-    '''remove_outliers(data, 'full_sq', 5000)
+    remove_outliers(data, 'full_sq', 5000)
     remove_outliers(data, 'life_sq', 7000)
     remove_outliers(data, 'floor', 70)
     remove_outliers(data, 'max_floor', 80)
@@ -78,5 +151,7 @@ if __name__ == "__main__":
     remove_outliers(data, 'mosque_count_1500', 1.0)
     remove_outliers(data, 'trc_sqm_2000', 2000000)
     remove_outliers(data, 'mosque_count_2000', 1.0)
-    write_file(data, "../resources/output.csv")'''
-    print(data[['floor', 'max_floor', 'material', 'build_year', 'num_room', 'ID_railroad_station_walk']].isnull().sum())
+    replace_missing_values_with_mode(data, ['floor', 'max_floor', 'material', 'build_year', 'num_room', 'ID_railroad_station_walk'])
+    replace_missing_values_with_mean(data, ['life_sq', 'kitch_sq', 'state', 'preschool_quota', 'school_quota', 'hospital_beds_raion', 'raion_build_count_with_material_info', 'build_count_block', 'build_count_wood', 'build_count_frame', 'build_count_brick', 'build_count_monolith', 'build_count_panel', 'build_count_foam', 'build_count_slag', 'build_count_mix', 'raion_build_count_with_builddate_info', 'build_count_before_1920', 'build_count_1921-1945', 'build_count_1946-1970', 'build_count_1971-1995', 'build_count_after_1995', 'metro_min_walk', 'metro_km_walk', 'railroad_station_walk_km', 'railroad_station_walk_min', 'cafe_sum_500_min_price_avg', 'cafe_sum_500_max_price_avg', 'cafe_avg_price_500', 'cafe_sum_1000_min_price_avg', 'cafe_sum_1000_max_price_avg', 'cafe_avg_price_1000', 'cafe_sum_1500_min_price_avg', 'cafe_sum_1500_max_price_avg', 'cafe_avg_price_1500', 'cafe_sum_2000_min_price_avg', 'cafe_sum_2000_max_price_avg', 'cafe_avg_price_2000', 'cafe_sum_3000_min_price_avg', 'cafe_sum_3000_max_price_avg', 'cafe_avg_price_3000', 'prom_part_5000', 'cafe_sum_5000_min_price_avg', 'cafe_sum_5000_max_price_avg', 'cafe_avg_price_5000'])
+    attribute_subset_selection_with_trees(data)
+    #write_file(data, "../resources/output.csv")'''
