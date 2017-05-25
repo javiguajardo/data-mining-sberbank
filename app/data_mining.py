@@ -5,6 +5,20 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.neural_network import MLPClassifier
 from sklearn.neural_network import MLPRegressor
 from sklearn import metrics
+from sklearn import tree
+
+#Bagging method
+from sklearn.ensemble import BaggingClassifier
+from sklearn.ensemble import BaggingRegressor
+
+#Boosting method
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import AdaBoostRegressor
+
+#Random Forest method
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor
+
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -85,6 +99,66 @@ def mlp_classifier(data):
 
     logger.debug("Model Score: %s", score)
 
+def ensemble_methods_classifiers(data):
+    #load data
+    num_features = len(data.columns) - 1
+
+    features = data[list(range(1, num_features))]
+    targets = data[[num_features]]
+
+    print(features)
+    print(targets)
+
+    # Data splitting
+    data_features_train, data_features_test, data_targets_train, data_targets_test = data_splitting(
+        features,
+        targets,
+        0.25)
+
+    # Model declaration
+    """
+    Parameters to select:
+    n_estimators: The number of base estimators in the ensemble.
+            Values: Random Forest and Bagging. Default 10
+                    AdaBoost. Default: 50
+    ###Only for Bagging and Boosting:###
+    base_estimator: Base algorithm of the ensemble. Default: DecisionTree
+    ###Only for Random Forest:###
+    criterion: "entropy" or "gini": default: gini
+    max_depth: maximum depth of tree, default: None
+    """
+
+    names = ["Bagging Classifier", "AdaBoost Classifier", "Random Forest Classifier"]
+
+    models = [
+        BaggingClassifier(
+            base_estimator=tree.DecisionTreeClassifier(
+                criterion='gini',
+                max_depth=10)
+        ),
+        AdaBoostClassifier(
+            n_estimators=10,
+            base_estimator=tree.DecisionTreeClassifier(
+                criterion='gini',
+                max_depth=10)
+        ),
+        RandomForestClassifier(
+            criterion='gini',
+            max_depth=10
+        )
+    ]
+
+    for name, em_clf in zip(names, models):
+        logger.info("###################---" + name + "---###################")
+
+        em_clf.fit(data_features_train, data_targets_train.values.ravel())
+
+        # Model evaluation
+        test_data_predicted = em_clf.predict(data_features_test)
+        score = metrics.accuracy_score(data_targets_test, test_data_predicted)
+
+        logger.debug("Model Score: %s", score)
+
 def data_splitting(data_features, data_targets, test_size):
     """
     This function returns four subsets that represents training and test data
@@ -101,4 +175,5 @@ def data_splitting(data_features, data_targets, test_size):
 if __name__ == '__main__':
     data = pandas.read_csv('../resources/output.csv')
     #decision_tree(data)
-    mlp_classifier(data)
+    #mlp_classifier(data)
+    ensemble_methods_classifiers(data)
