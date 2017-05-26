@@ -84,11 +84,39 @@ def find_outliers(data):
     mosque_count_2000 - 1.0
     '''
 
+    '''
+    candidates for outliers 2
+    material - 4
+    build_year - < 1500 y 2020 >
+    green_zone_part - 0.7
+    indust_part - 0.45
+    preschool_quota - 7000
+    school_quota - 16000
+    school_education_centers_top_20_raion - 0.75
+    hospital_beds_raion - 3500
+    university_top_20_raion - 3
+    '''
+
 def boxplot_graph(data, feature):
     ax = sns.boxplot(data[feature]);
+    plt.show()
+
+def find_num_of_missing_values(data):
+    missing_df = data.isnull().sum(axis=0).reset_index()
+    missing_df.columns = ['column_name', 'missing_count']
+    missing_df = missing_df.ix[missing_df['missing_count']>0]
+    ind = np.arange(missing_df.shape[0])
+    width = 0.9
+    fig, ax = plt.subplots(figsize=(12,18))
+    rects = ax.barh(ind, missing_df.missing_count.values, color='y')
+    ax.set_yticks(ind)
+    ax.set_yticklabels(missing_df.column_name.values, rotation='horizontal')
+    ax.set_xlabel("Count of missing values")
+    ax.set_title("Number of missing values in each column")
     plt.show()
 
 if __name__ == '__main__':
     data = open_file("../resources/output.csv")
     #find_outliers(data)
-    boxplot_graph(data, 'floor')
+    #find_num_of_missing_values(data)
+    boxplot_graph(data, 'green_zone_part')
