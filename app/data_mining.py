@@ -19,6 +19,9 @@ from sklearn.ensemble import AdaBoostRegressor
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
 
+import xgboost as xgb
+from sklearn import preprocessing
+import matplotlib.pyplot as plt
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -159,6 +162,34 @@ def ensemble_methods_classifiers(data):
 
         logger.debug("Model Score: %s", score)
 
+def xgboost(train_df):
+    for f in train_df.columns:
+        if train_df[f].dtype=='object':
+            lbl = preprocessing.LabelEncoder()
+            lbl.fit(list(train_df[f].values))
+            train_df[f] = lbl.transform(list(train_df[f].values))
+
+    train_y = train_df.price_doc.values
+    train_X = train_df.drop(["id", "timestamp", "price_doc"], axis=1)
+
+    xgb_params = {
+        'eta': 0.05,
+        'max_depth': 8,
+        'subsample': 0.7,
+        'colsample_bytree': 0.7,
+        'objective': 'reg:linear',
+        'eval_metric': 'rmse',
+        'silent': 1
+    }
+    dtrain = xgb.DMatrix(train_X, train_y, feature_names=train_X.columns.values)
+    model = xgb.train(dict(xgb_params, silent=0), dtrain, num_boost_round=100)
+
+
+    # plot the important features #
+    fig, ax = plt.subplots(figsize=(12,18))
+    xgb.plot_importance(model, max_num_features=50, height=0.8, ax=ax)
+    plt.show()
+
 def data_splitting(data_features, data_targets, test_size):
     """
     This function returns four subsets that represents training and test data
@@ -176,4 +207,5 @@ if __name__ == '__main__':
     data = pandas.read_csv('../resources/output.csv')
     #decision_tree(data)
     #mlp_classifier(data)
-    ensemble_methods_classifiers(data)
+    #ensemble_methods_classifiers(data)
+    xgboost(data)
