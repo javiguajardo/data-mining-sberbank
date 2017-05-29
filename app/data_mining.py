@@ -19,7 +19,11 @@ from sklearn.ensemble import AdaBoostRegressor
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
 
-import xgboost as xgb
+from sklearn.neural_network import MLPRegressor
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.svm import SVR
+from sklearn import model_selection
+
 from sklearn import preprocessing
 import matplotlib.pyplot as plt
 
@@ -28,10 +32,11 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 def decision_tree(data):
+    #load data
     num_features = len(data.columns) - 1
 
-    features = data[list(range(1, num_features))]
-    target = data[[num_features]]
+    features = data.ix[:, 0:num_features]
+    target = data.ix[:, num_features]
 
     print(features)
     print(target)
@@ -46,7 +51,7 @@ def decision_tree(data):
     criterion: "mse"
     max_depth: maximum depth of tree, default: None
     """
-    dec_tree_reg = DecisionTreeRegressor(criterion='mse', max_depth=5)
+    dec_tree_reg = DecisionTreeRegressor(criterion='mse', max_depth=10)
     dec_tree_reg.fit(data_features_train, data_targets_train)
 
     # Model evaluation
@@ -60,8 +65,8 @@ def mlp_classifier(data):
     #load data
     num_features = len(data.columns) - 1
 
-    features = data[list(range(1, num_features))]
-    targets = data[[num_features]]
+    features = data.ix[:, 0:num_features]
+    targets = data.ix[:, num_features]
 
     print(features)
     print(targets)
@@ -90,7 +95,7 @@ def mlp_classifier(data):
             Values: "True" or "False". Default: False
     """
     neural_net = MLPClassifier(
-        hidden_layer_sizes=(50),
+        hidden_layer_sizes=(25),
         activation="relu",
         solver="adam"
     )
@@ -106,8 +111,8 @@ def ensemble_methods_classifiers(data):
     #load data
     num_features = len(data.columns) - 1
 
-    features = data[list(range(1, num_features))]
-    targets = data[[num_features]]
+    features = data.ix[:, 0:num_features]
+    targets = data.ix[:, num_features]
 
     print(features)
     print(targets)
@@ -131,7 +136,7 @@ def ensemble_methods_classifiers(data):
     max_depth: maximum depth of tree, default: None
     """
 
-    names = ["Bagging Classifier", "AdaBoost Classifier", "Random Forest Classifier"]
+    names = ["Bagging Classifier", "AdaBoost Classifier", "Random Forest Classifier", "Decision Tree Regressor", "SVR", "KNeighbors Regressor"]
 
     models = [
         BaggingClassifier(
@@ -148,7 +153,16 @@ def ensemble_methods_classifiers(data):
         RandomForestClassifier(
             criterion='gini',
             max_depth=10
-        )
+        ),
+        tree.DecisionTreeRegressor(
+            criterion='mse'
+        ),
+        SVR(
+            kernel='rbf',
+            C=1e3,
+            gamma=0.1
+        ),
+        KNeighborsRegressor()
     ]
 
     for name, em_clf in zip(names, models):
@@ -158,37 +172,9 @@ def ensemble_methods_classifiers(data):
 
         # Model evaluation
         test_data_predicted = em_clf.predict(data_features_test)
-        score = metrics.accuracy_score(data_targets_test, test_data_predicted)
 
-        logger.debug("Model Score: %s", score)
-
-def xgboost(train_df):
-    for f in train_df.columns:
-        if train_df[f].dtype=='object':
-            lbl = preprocessing.LabelEncoder()
-            lbl.fit(list(train_df[f].values))
-            train_df[f] = lbl.transform(list(train_df[f].values))
-
-    train_y = train_df.price_doc.values
-    train_X = train_df.drop(["id", "timestamp", "price_doc"], axis=1)
-
-    xgb_params = {
-        'eta': 0.05,
-        'max_depth': 8,
-        'subsample': 0.7,
-        'colsample_bytree': 0.7,
-        'objective': 'reg:linear',
-        'eval_metric': 'rmse',
-        'silent': 1
-    }
-    dtrain = xgb.DMatrix(train_X, train_y, feature_names=train_X.columns.values)
-    model = xgb.train(dict(xgb_params, silent=0), dtrain, num_boost_round=100)
-
-
-    # plot the important features #
-    fig, ax = plt.subplots(figsize=(12,18))
-    xgb.plot_importance(model, max_num_features=50, height=0.8, ax=ax)
-    plt.show()
+        error = metrics.mean_absolute_error(data_targets_test, test_data_predicted)
+        logger.debug('Total Error: %s', error)
 
 def data_splitting(data_features, data_targets, test_size):
     """
@@ -207,5 +193,4 @@ if __name__ == '__main__':
     data = pandas.read_csv('../resources/output.csv')
     #decision_tree(data)
     #mlp_classifier(data)
-    #ensemble_methods_classifiers(data)
-    xgboost(data)
+    ensemble_methods_classifiers(data)

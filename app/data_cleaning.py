@@ -41,24 +41,32 @@ def replace_missing_values_with_mean(data, features):
 
     return data
 
+def replace_missing_values_with_constant(data, constant):
+   data.fillna(constant, inplace=True)
+   return data
+
+def drop_features(data, features):
+   data.drop(features, axis=1, inplace=True)
+   return data
+
+def nominal_to_numeric(train_df):
+   for f in train_df.columns:
+       if train_df[f].dtype=='object':
+           lbl = preprocessing.LabelEncoder()
+           lbl.fit(list(train_df[f].values.astype('str')))
+           train_df[f] = lbl.transform(list(train_df[f].values.astype('str')))
+
 def principal_components_analysis(data, n_components):
     # import data
     num_features = len(data.columns) - 1
 
-    cols = data.columns
-    num_cols = data._get_numeric_data().columns
-    nominal_cols = list(set(cols) - set(num_cols))
-
-    data[nominal_cols] = convert_data_to_numeric(data[nominal_cols])
-
-    features = data[list(range(1, num_features))]
-    target = data[[num_features]]
+    features = data.ix[:, 0:num_features]
+    target = data.ix[:, num_features]
 
     # First 10 rows
     print('Training Data:\n\n' + str(features[:10]))
     print('\n')
     print('Targets:\n\n' + str(target[:10]))
-
     # Model declaration
     if n_components < 1:
         pca = PCA(n_components = n_components, svd_solver = 'full')
@@ -83,7 +91,7 @@ def principal_components_analysis(data, n_components):
     print(new_feature_vector[:10])
     print('\n\n')
 
-    new_data = np.append(new_feature_vector, target.values, axis=1)
+    new_data = np.append(new_feature_vector, target.reshape(target.shape[0], -1), axis=1)
     print('\nNew array\n')
     print(new_data)
 
@@ -93,14 +101,8 @@ def attribute_subset_selection_with_trees(data):
     # import data
     num_features = len(data.columns) - 1
 
-    cols = data.columns
-    num_cols = data._get_numeric_data().columns
-    nominal_cols = list(set(cols) - set(num_cols))
-
-    data[nominal_cols] = convert_data_to_numeric(data[nominal_cols])
-
-    features = data[list(range(1, num_features))]
-    target = data[[num_features]]
+    features = data.ix[:, 0:num_features]
+    target = data.ix[:, num_features]
 
     # First 10 rows
     print('Training Data:\n\n' + str(features[:10]))
@@ -108,7 +110,7 @@ def attribute_subset_selection_with_trees(data):
     print('Targets:\n\n' + str(target[:10]))
 
     # Model declaration
-    extra_tree = ExtraTreesClassifier(n_estimators=100, max_features=100, max_depth = 5)
+    extra_tree = ExtraTreesClassifier(n_estimators=500, max_features=80, max_depth = 10)
 
     # Model training
     extra_tree.fit(features, target.values.ravel())
@@ -147,7 +149,7 @@ def attribute_subset_selection_with_trees(data):
     plt.xlim([-1, features.shape[1]])
     plt.show()'''
 
-    new_data = np.append(new_feature_vector, target.values, axis=1)
+    new_data = np.append(new_feature_vector, target.reshape(target.shape[0], -1), axis=1)
     print('\nNew array\n')
     print(new_data)
 
@@ -308,8 +310,8 @@ def first_iteration(data):
     replace_missing_values_with_mode(data, ['floor', 'max_floor', 'material', 'build_year', 'num_room', 'ID_railroad_station_walk'])
     replace_missing_values_with_mean(data, ['life_sq', 'kitch_sq', 'state', 'preschool_quota', 'school_quota', 'hospital_beds_raion', 'raion_build_count_with_material_info', 'build_count_block', 'build_count_wood', 'build_count_frame', 'build_count_brick', 'build_count_monolith', 'build_count_panel', 'build_count_foam', 'build_count_slag', 'build_count_mix', 'raion_build_count_with_builddate_info', 'build_count_before_1920', 'build_count_1921-1945', 'build_count_1946-1970', 'build_count_1971-1995', 'build_count_after_1995', 'metro_min_walk', 'metro_km_walk', 'railroad_station_walk_km', 'railroad_station_walk_min', 'cafe_sum_500_min_price_avg', 'cafe_sum_500_max_price_avg', 'cafe_avg_price_500', 'cafe_sum_1000_min_price_avg', 'cafe_sum_1000_max_price_avg', 'cafe_avg_price_1000', 'cafe_sum_1500_min_price_avg', 'cafe_sum_1500_max_price_avg', 'cafe_avg_price_1500', 'cafe_sum_2000_min_price_avg', 'cafe_sum_2000_max_price_avg', 'cafe_avg_price_2000', 'cafe_sum_3000_min_price_avg', 'cafe_sum_3000_max_price_avg', 'cafe_avg_price_3000', 'prom_part_5000', 'cafe_sum_5000_min_price_avg', 'cafe_sum_5000_max_price_avg', 'cafe_avg_price_5000'])
     #data = attribute_subset_selection_with_trees(data)
-    data = principal_components_analysis(data, 150)
-    data = z_score_normalization(data)
+    principal_components_analysis(data, 150)
+    #data = z_score_normalization(data)
     #data = min_max_scaler(data)
 
 def second_iteration(data):
@@ -381,10 +383,18 @@ def second_iteration(data):
     remove_outliers(data, 'school_education_centers_top_20_raion', 0.75)
     remove_outliers(data, 'hospital_beds_raion', 3500)
     remove_outliers(data, 'university_top_20_raion', 3)
+    nominal_to_numeric(data)
+    replace_missing_values_with_constant(data, -100)
+    drop_features(data, ['id', 'timestamp'])
+    #data = principal_components_analysis(data, 80)
+    data = attribute_subset_selection_with_trees(data)
+    data = z_score_normalization(data)
+    #data = min_max_scaler(data)
+
 
 
 if __name__ == "__main__":
     data = open_file("../resources/train.csv")
     #first_iteration(data)
-    #second_iteration(data)
-    #write_file(data, "../resources/output.csv")
+    second_iteration(data)
+    write_file(data, "../resources/output.csv")
