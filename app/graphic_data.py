@@ -97,6 +97,11 @@ def find_outliers(data):
     university_top_20_raion - 3
     '''
 
+    '''
+    candidates for outliers 3
+
+    '''
+
 def boxplot_graph(data, feature):
     ax = sns.boxplot(data[feature]);
     plt.show()
@@ -116,7 +121,7 @@ def find_num_of_missing_values(data):
     plt.show()
 
 if __name__ == '__main__':
-    data = open_file("../resources/output.csv")
+    data = open_file("../resources/train_output.csv")
     #find_outliers(data)
     #find_num_of_missing_values(data)
-    boxplot_graph(data, 'green_zone_part')
+    boxplot_graph(data, 'full_sq')

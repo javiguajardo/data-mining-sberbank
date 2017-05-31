@@ -107,12 +107,12 @@ def mlp_classifier(data):
 
     logger.debug("Model Score: %s", score)
 
-def ensemble_methods_classifiers(data):
+def ensemble_methods_classifiers(train, test):
     #load data
-    num_features = len(data.columns) - 1
+    num_features = len(train.columns) - 1
 
-    features = data.ix[:, 0:num_features]
-    targets = data.ix[:, num_features]
+    features = train.ix[:, 1:num_features]
+    targets = train.ix[:, num_features]
 
     print(features)
     print(targets)
@@ -172,6 +172,17 @@ def ensemble_methods_classifiers(data):
 
         # Model evaluation
         test_data_predicted = em_clf.predict(data_features_test)
+        
+        # Get predictions to Kaggle
+        kaggle_predictions = em_clf.predict(test.ix[:, 1:num_features])
+
+         # Generate CSV for Kaggle with csv package:
+        path = "../resources/predicted_kaggle_" + str(name) +".csv"
+
+        # Generate CSV for Kaggle with pandas (easiest way)
+        df_predicted = pandas.DataFrame({'id': test.ix[:,0], 'price_doc': kaggle_predictions})
+
+        df_predicted.to_csv(path, index=False)
 
         error = metrics.mean_absolute_error(data_targets_test, test_data_predicted)
         logger.debug('Total Error: %s', error)
@@ -190,7 +201,8 @@ def data_splitting(data_features, data_targets, test_size):
     return data_features_train, data_features_test, data_targets_train, data_targets_test
 
 if __name__ == '__main__':
-    data = pandas.read_csv('../resources/output.csv')
-    #decision_tree(data)
-    #mlp_classifier(data)
-    ensemble_methods_classifiers(data)
+    train = pandas.read_csv('../resources/train_output.csv')
+    test = pandas.read_csv('../resources/test_output.csv')
+    #decision_tree(train)
+    #mlp_classifier(train)
+    ensemble_methods_classifiers(train, test)
